@@ -21,6 +21,7 @@ jobs:
           mkdir -p src/components
           mkdir -p src/store
           mkdir -p src/pages
+          mkdir -p src/layouts
 
           echo "Moving source files into correct folders..."
 
@@ -41,14 +42,22 @@ jobs:
           done
 
           # 3. Move Page files to src/pages/
-          for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx MainLayout.tsx SettingsPage.tsx
+          for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx SettingsPage.tsx
           do
             if [ -f "$file" ]; then
               mv "$file" "src/pages/$file"
             fi
           done
 
-          # 4. Move Root App files to src/
+          # 4. Move layout files to src/layouts/
+          for file in MainLayout.tsx
+          do
+            if [ -f "$file" ]; then
+              mv "$file" "src/layouts/$file"
+            fi
+          done
+
+          # 5. Move Root App files to src/
           for file in App.tsx main.tsx index.css
           do
             if [ -f "$file" ]; then
