@@ -22,18 +22,36 @@ jobs:
           mkdir -p src/store
           mkdir -p src/pages
           mkdir -p src/layouts
+          mkdir -p src/db
+          mkdir -p src/utils
 
           echo "Moving source files into correct folders..."
 
-          # 1. Move store/logic files to src/store/
-          for file in useStore.ts database.ts helpers.ts cn.ts
+          # 1. Move store/state files to src/store/
+          for file in useStore.ts
           do
             if [ -f "$file" ]; then
               mv "$file" "src/store/$file"
             fi
           done
 
-          # 2. Move component files to src/components/
+          # 2. Move database file to src/db/
+          for file in database.ts
+          do
+            if [ -f "$file" ]; then
+              mv "$file" "src/db/$file"
+            fi
+          done
+
+          # 3. Move utility files to src/utils/
+          for file in helpers.ts cn.ts
+          do
+            if [ -f "$file" ]; then
+              mv "$file" "src/utils/$file"
+            fi
+          done
+
+          # 4. Move component files to src/components/
           for file in Sidebar.tsx TopBar.tsx JobDetailModal.tsx JobFormModal.tsx
           do
             if [ -f "$file" ]; then
@@ -41,7 +59,7 @@ jobs:
             fi
           done
 
-          # 3. Move Page files to src/pages/
+          # 5. Move page files to src/pages/
           for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx SettingsPage.tsx
           do
             if [ -f "$file" ]; then
@@ -49,7 +67,7 @@ jobs:
             fi
           done
 
-          # 4. Move layout files to src/layouts/
+          # 6. Move layout files to src/layouts/
           for file in MainLayout.tsx
           do
             if [ -f "$file" ]; then
@@ -57,7 +75,7 @@ jobs:
             fi
           done
 
-          # 5. Move Root App files to src/
+          # 7. Move root app files to src/
           for file in App.tsx main.tsx index.css
           do
             if [ -f "$file" ]; then
@@ -76,7 +94,7 @@ jobs:
           fi
 
           echo "Final repaired structure:"
-          find . -maxdepth 3 -type f | sort
+          find . -maxdepth 4 -type f | sort
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
