@@ -14,65 +14,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show original files
-        run: |
-          echo "Original repo structure:"
-          ls -la
-
       - name: Repair Vite React source structure
         run: |
           echo "Creating src folder structure..."
           mkdir -p src
           mkdir -p src/components
           mkdir -p src/store
+          mkdir -p src/pages
 
           echo "Moving source files into correct folders..."
 
-          # Move store-related files to src/store/
+          # 1. Move store/logic files to src/store/
           for file in useStore.ts database.ts helpers.ts cn.ts
           do
             if [ -f "$file" ]; then
-              echo "Moving $file to src/store/$file"
               mv "$file" "src/store/$file"
             fi
           done
 
-          # Move component files to src/components/
-          for file in \
-            Sidebar.tsx \
-            TopBar.tsx \
-            JobDetailModal.tsx \
-            JobFormModal.tsx
+          # 2. Move component files to src/components/
+          for file in Sidebar.tsx TopBar.tsx JobDetailModal.tsx JobFormModal.tsx
           do
             if [ -f "$file" ]; then
-              echo "Moving $file to src/components/$file"
               mv "$file" "src/components/$file"
             fi
           done
 
-          # Move page files to src/
-          for file in \
-            App.tsx \
-            main.tsx \
-            index.css \
-            AnalyticsPage.tsx \
-            AuthPage.tsx \
-            CalendarPage.tsx \
-            DashboardPage.tsx \
-            JobsPage.tsx \
-            MainLayout.tsx \
-            SettingsPage.tsx
+          # 3. Move Page files to src/pages/
+          for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx MainLayout.tsx SettingsPage.tsx
           do
             if [ -f "$file" ]; then
-              echo "Moving $file to src/$file"
+              mv "$file" "src/pages/$file"
+            fi
+          done
+
+          # 4. Move Root App files to src/
+          for file in App.tsx main.tsx index.css
+          do
+            if [ -f "$file" ]; then
               mv "$file" "src/$file"
             fi
           done
 
           echo "Ensuring vite-env file exists..."
-          if [ ! -f src/vite-env.d.ts ]; then
-            echo '/// <reference types="vite/client" />' > src/vite-env.d.ts
-          fi
+          echo '/// <reference types="vite/client" />' > src/vite-env.d.ts
 
           echo "Ensuring index.html points to /src/main.tsx..."
           if [ -f index.html ]; then
@@ -90,16 +75,13 @@ jobs:
           node-version: 20
 
       - name: Install Node dependencies
-        run: |
-          npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Ensure Capacitor Android dependencies exist
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
 
       - name: Build web app
-        run: |
-          npm run build
+        run: npm run build
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -113,19 +95,16 @@ jobs:
       - name: Create Android project if missing
         run: |
           if [ ! -d android ]; then
-            echo "No android folder found. Creating Capacitor Android project..."
             npx cap add android
           else
             echo "Android folder already exists."
           fi
 
       - name: Sync Capacitor Android project
-        run: |
-          npx cap sync android
+        run: npx cap sync android
 
       - name: Make Gradle executable
-        run: |
-          chmod +x android/gradlew
+        run: chmod +x android/gradlew
 
       - name: Build debug APK
         run: |
