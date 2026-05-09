@@ -114,6 +114,9 @@ export const createEmptyJob = (): Omit<JobRecord, 'id'> => ({
   notes: '',
   reminders: [],
   checklist: [],
+  contacts: [],
+  hoursSpent: 0,
+  applicationEffort: '',
   lessonsLearned: {},
   outcomeComparison: {},
   createdAt: new Date().toISOString(),
@@ -124,10 +127,12 @@ export const exportToCSV = (jobs: JobRecord[]): void => {
   const headers = [
     'Job Title', 'Company', 'Industry', 'Location', 'Status', 'Source',
     'Salary', 'Closing Date', 'Application Date', 'Contact', 'Notes', 'Tags',
+    'Hours Spent', 'Effort Level',
   ];
   const rows = jobs.map((j) => [
     j.jobTitle, j.company, j.industry, j.location, statusLabel(j.status), j.sourceType,
     j.salary, j.closingDate, j.applicationDate, j.contactPerson, j.notes, j.tags.join(';'),
+    j.hoursSpent ?? 0, j.applicationEffort ?? '',
   ]);
   const csv = [headers, ...rows]
     .map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
