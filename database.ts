@@ -22,7 +22,26 @@ export type SourceType =
   | 'Glassdoor'
   | 'Other';
 
-export type ReminderTiming = '1_day' | '3_days' | '1_week' | 'custom';
+export type ReminderTiming = '1_day' | '3_days' | '1_week' | 'apply_by' | 'custom';
+
+export type ContactRole =
+  | 'Hiring Manager'
+  | 'Recruiter'
+  | 'Internal Contact'
+  | 'Referral'
+  | 'Other';
+
+export type ApplicationEffort = 'bespoke' | 'quick_apply' | 'template' | '';
+
+export interface Contact {
+  id: string;
+  name: string;
+  role: ContactRole;
+  email?: string;
+  phone?: string;
+  linkedin?: string;
+  notes?: string;
+}
 
 export interface Reminder {
   id: string;
@@ -68,9 +87,9 @@ export interface JobRecord {
   location: string;
   website: string;
   sourceType: SourceType;
-  sourceImage?: string; // base64 of uploaded image
+  sourceImage?: string;
   sourceImageName?: string;
-  sourceText?: string; // pasted text
+  sourceText?: string;
 
   // JD Details
   qualificationsRequired: string;
@@ -84,7 +103,7 @@ export interface JobRecord {
   closingDate: string;
   applicationDate: string;
 
-  // Status & Organization
+  // Status & Organisation
   status: JobStatus;
   isFavorite: boolean;
   isArchived: boolean;
@@ -94,6 +113,13 @@ export interface JobRecord {
   // Tracking
   reminders: Reminder[];
   checklist: ChecklistItem[];
+
+  // CRM
+  contacts: Contact[];
+
+  // Energy / ROI
+  hoursSpent: number;
+  applicationEffort: ApplicationEffort;
 
   // Analysis
   lessonsLearned: LessonsLearned;
@@ -124,12 +150,16 @@ class JobTrackrDB extends Dexie {
       jobs: '++id, uuid, status, company, industry, closingDate, applicationDate, isFavorite, isArchived, createdAt',
       users: '++id, email',
     });
+    // Version 2: adds contacts, hoursSpent, applicationEffort (no new indexes needed)
+    this.version(2).stores({
+      jobs: '++id, uuid, status, company, industry, closingDate, applicationDate, isFavorite, isArchived, createdAt',
+      users: '++id, email',
+    });
   }
 }
 
 export const db = new JobTrackrDB();
 
-// Helper functions
 export const getAllJobs = async (includeArchived = false): Promise<JobRecord[]> => {
   if (includeArchived) return db.jobs.toArray();
   return db.jobs.where('isArchived').equals(0).toArray();
