@@ -2,127 +2,99 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Show original files
+      - name: 🔥 AUTO FIX REPO STRUCTURE & CREATE ALL MISSING FILES
         run: |
-          echo "Original repo structure:"
-          ls -la
+          # Create full correct folder structure
+          mkdir -p src/components src/utils
 
-      - name: Repair Vite React source structure
-        run: |
-          echo "Creating src folder..."
-          mkdir -p src
+          # Auto move all page and component files
+          mv *Page.tsx *Modal.tsx Sidebar.tsx TopBar.tsx MainLayout.tsx src/components/ 2>/dev/null || true
 
-          echo "Moving React/TypeScript source files into src/ if they are in root..."
+          # Auto move all core source files
+          mv App.tsx main.tsx index.css useStore.ts database.ts helpers.ts cn.ts src/ 2>/dev/null || true
 
-          for file in \
-            App.tsx \
-            main.tsx \
-            index.css \
-            AnalyticsPage.tsx \
-            AuthPage.tsx \
-            CalendarPage.tsx \
-            DashboardPage.tsx \
-            JobDetailModal.tsx \
-            JobFormModal.tsx \
-            JobsPage.tsx \
-            MainLayout.tsx \
-            SettingsPage.tsx \
-            Sidebar.tsx \
-            TopBar.tsx \
-            cn.ts \
-            database.ts \
-            helpers.ts \
-            useStore.ts
-          do
-            if [ -f "$file" ]; then
-              echo "Moving $file to src/$file"
-              mv "$file" "src/$file"
-            fi
-          done
+          # Create JobTrackr types.ts
+          cat > src/types.ts << 'EOF'
+export interface Job {
+  id: string;
+  company: string;
+  title: string;
+  location: string;
+  salary: string;
+  status: 'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
+  dateApplied: string;
+  notes: string;
+  source: string;
+  createdAt: number;
+}
 
-          echo "Ensuring vite-env file exists..."
-          if [ ! -f src/vite-env.d.ts ]; then
-            cat > src/vite-env.d.ts <<'EOF'
-/// <reference types="vite/client" />
+export interface FilterState {
+  status: string;
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+}
 EOF
-         fi
 
-          echo "Ensuring index.html points to /src/main.tsx..."
-          if [ -f index.html ]; then
-            sed -i 's|src="/main.tsx"|src="/src/main.tsx"|g' index.html
-            sed -i 's|src="./main.tsx"|src="/src/main.tsx"|g' index.html
-            sed -i 's|src="main.tsx"|src="/src/main.tsx"|g' index.html
-          fi
+          # Create OCR utility (matches your app's advertised feature)
+          cat > src/utils/ocr.ts << 'EOF'
+import Tesseract from 'tesseract.js';
 
-          echo "Final repaired structure:"
-          find . -maxdepth 3 -type f | sort
+export const extractTextFromImage = async (file: File) => {
+  const result = await Tesseract.recognize(file, 'eng');
+  return result.data.text;
+};
 
-      - name: Set up Node.js
+export const autoParseJob = (text: string) => ({
+  title: text.match(/(title|position|role):\s*(.*)/i)?.[2] || '',
+  company: text.match(/(company|employer):\s*(.*)/i)?.[2] || '',
+  location: text.match(/(location|city):\s*(.*)/i)?.[2] || '',
+  salary: text.match(/(salary|pay|compensation):\s*(.*)/i)?.[2] || '',
+})
+EOF
+
+          # Create date helper
+          cat > src/utils/date.ts << 'EOF'
+export const formatDate = (date: Date) => new Intl.DateTimeFormat('en-ZA').format(date);
+export const getDaysAgo = (timestamp: number) => Math.floor((Date.now() - timestamp) / 86400000);
+EOF
+
+          # Create export helper
+          cat > src/utils/export.ts << 'EOF'
+import type { Job } from '../types';
+export const exportToCSV = (jobs: Job[]) => {
+  const headers = Object.keys(jobs[0]).join(',');
+  const rows = jobs.map(j => Object.values(j).join(','));
+  return [headers, ...rows].join('\n');
+}
+EOF
+
+          echo "✅ All fixes completed!"
+
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Node dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+      - name: Install all dependencies
+        run: npm install
 
-      - name: Ensure Capacitor Android dependencies exist
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android --no-audit --no-fund
+      - name: Build Vite web app
+        run: npm run build
 
-      - name: Build web app
-        run: |
-          npm run build
+      - name: Build Capacitor Android APK
+        uses: ./.github/actions/build-apk
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Create Android project if missing
-        run: |
-          if [ ! -d android ]; then
-            echo "No android folder found. Creating Capacitor Android project..."
-            npx cap add android
-          else
-            echo "Android folder already exists."
-          fi
-
-      - name: Sync Capacitor Android project
-        run: |
-          npx cap sync android
-
-      - name: Make Gradle executable
-        run: |
-          chmod +x android/gradlew
-
-      - name: Build debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
-
-      - name: Upload APK artifact
+      - name: Upload finished APK
         uses: actions/upload-artifact@v4
         with:
-          name: JobTrackr-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: JobTrackr-Release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
