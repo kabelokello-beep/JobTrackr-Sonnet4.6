@@ -21,11 +21,36 @@ jobs:
 
       - name: Repair Vite React source structure
         run: |
-          echo "Creating src folder..."
+          echo "Creating src folder structure..."
           mkdir -p src
+          mkdir -p src/components
+          mkdir -p src/store
 
-          echo "Moving React/TypeScript source files into src/ if they are in root..."
+          echo "Moving source files into correct folders..."
 
+          # Move store-related files to src/store/
+          for file in useStore.ts database.ts helpers.ts cn.ts
+          do
+            if [ -f "$file" ]; then
+              echo "Moving $file to src/store/$file"
+              mv "$file" "src/store/$file"
+            fi
+          done
+
+          # Move component files to src/components/
+          for file in \
+            Sidebar.tsx \
+            TopBar.tsx \
+            JobDetailModal.tsx \
+            JobFormModal.tsx
+          do
+            if [ -f "$file" ]; then
+              echo "Moving $file to src/components/$file"
+              mv "$file" "src/components/$file"
+            fi
+          done
+
+          # Move page files to src/
           for file in \
             App.tsx \
             main.tsx \
@@ -34,17 +59,9 @@ jobs:
             AuthPage.tsx \
             CalendarPage.tsx \
             DashboardPage.tsx \
-            JobDetailModal.tsx \
-            JobFormModal.tsx \
             JobsPage.tsx \
             MainLayout.tsx \
-            SettingsPage.tsx \
-            Sidebar.tsx \
-            TopBar.tsx \
-            cn.ts \
-            database.ts \
-            helpers.ts \
-            useStore.ts
+            SettingsPage.tsx
           do
             if [ -f "$file" ]; then
               echo "Moving $file to src/$file"
