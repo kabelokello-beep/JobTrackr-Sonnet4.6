@@ -37,7 +37,7 @@ jobs:
             if [ -f "$file" ]; then mv "$file" "src/db/$file"; fi
           done
 
-          for file in helpers.ts cn.ts
+          for file in helpers.ts cn.ts notifications.ts
           do
             if [ -f "$file" ]; then mv "$file" "src/utils/$file"; fi
           done
@@ -84,6 +84,7 @@ jobs:
       - name: Ensure Capacitor Android dependencies exist
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
+          npm install @capacitor/local-notifications --legacy-peer-deps --no-audit --no-fund
           npm install react-is --legacy-peer-deps --no-audit --no-fund
 
       - name: Build web app
