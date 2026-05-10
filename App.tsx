@@ -3,6 +3,7 @@ import { useStore } from './store/useStore';
 import { Toaster } from 'react-hot-toast';
 import AuthPage from './pages/AuthPage';
 import MainLayout from './layouts/MainLayout';
+import { requestNotificationPermission, rescheduleAllReminders } from './utils/notifications';
 
 export default function App() {
   const { isAuthenticated, darkMode } = useStore();
@@ -14,6 +15,16 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        await rescheduleAllReminders();
+      }
+    };
+    initNotifications();
+  }, []);
 
   return (
     <div className={darkMode ? 'dark' : ''}>
