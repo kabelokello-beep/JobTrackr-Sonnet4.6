@@ -25,8 +25,6 @@ jobs:
           mkdir -p src/db
           mkdir -p src/utils
 
-          echo "Moving source files into correct folders..."
-
           for file in useStore.ts
           do
             if [ -f "$file" ]; then mv "$file" "src/store/$file"; fi
@@ -109,6 +107,20 @@ jobs:
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
+
+      - name: Generate app icon
+        run: |
+          if [ -f icon.svg ]; then
+            sudo apt-get install -y librsvg2-bin
+            rsvg-convert -w 1024 -h 1024 icon.svg -o icon_1024.png
+            mkdir -p assets
+            cp icon_1024.png assets/icon.png
+            npm install @capacitor/assets --no-save --legacy-peer-deps
+            npx @capacitor/assets generate --android
+            echo "Icon generated successfully"
+          else
+            echo "No icon.svg found, skipping icon generation"
+          fi
 
       - name: Fix Kotlin stdlib duplicate classes
         run: |
