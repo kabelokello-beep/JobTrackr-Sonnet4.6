@@ -5,9 +5,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
-import { TrendingUp, Target, Award, Zap } from 'lucide-react';
-import { statusLabel, ALL_INDUSTRIES } from '../utils/helpers';
-import { format, subMonths, parseISO } from 'date-fns';
+import { TrendingUp, Target, Award, Zap, Calendar, CalendarDays, CalendarRange } from 'lucide-react';
+import { statusLabel } from '../utils/helpers';
+import {
+  format, subMonths, parseISO, isAfter,
+  startOfDay, startOfWeek, startOfMonth
+} from 'date-fns';
 
 const STATUS_COLORS: Record<string, string> = {
   wishlist: '#94a3b8',
@@ -20,6 +23,11 @@ const STATUS_COLORS: Record<string, string> = {
   no_response: '#6b7280',
 };
 
+const SOURCE_PALETTE = [
+  '#6366f1','#3b82f6','#f59e0b','#10b981',
+  '#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16',
+];
+
 export default function AnalyticsPage() {
   const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +38,9 @@ export default function AnalyticsPage() {
 
   const total = jobs.length;
   const applied = jobs.filter((j) => !['wishlist', 'no_response'].includes(j.status)).length;
-  const interviews = jobs.filter((j) => ['interview_scheduled', 'interview_completed', 'offer', 'hired'].includes(j.status)).length;
+  const interviews = jobs.filter((j) =>
+    ['interview_scheduled', 'interview_completed', 'offer', 'hired'].includes(j.status)
+  ).length;
   const offers = jobs.filter((j) => ['offer', 'hired'].includes(j.status)).length;
   const rejections = jobs.filter((j) => j.status === 'rejected').length;
   const hired = jobs.filter((j) => j.status === 'hired').length;
@@ -38,7 +48,48 @@ export default function AnalyticsPage() {
   const offerRate = interviews > 0 ? Math.round((offers / interviews) * 100) : 0;
   const successRate = applied > 0 ? Math.round(((interviews + offers) / applied) * 100) : 0;
 
-  // Status distribution data
+  // ── Activity counters ────────────────────────────────────────────
+  const now = new Date();
+  const dayStart = startOfDay(now);
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+  const monthStart = startOfMonth(now);
+
+  const safeDate = (str: string | undefined): Date | null => {
+    if (!str) return null;
+    try { return parseISO(str); } catch { return null; }
+  };
+
+  const appliedToday = jobs.filter((j) => {
+    const d = safeDate(j.applicationDate) || safeDate(j.createdAt);
+    return d && isAfter(d, dayStart) && j.status !== 'wishlist';
+  }).length;
+
+  const appliedThisWeek = jobs.filter((j) => {
+    const d = safeDate(j.applicationDate) || safeDate(j.createdAt);
+    return d && isAfter(d, weekStart) && j.status !== 'wishlist';
+  }).length;
+
+  const appliedThisMonth = jobs.filter((j) => {
+    const d = safeDate(j.applicationDate) || safeDate(j.createdAt);
+    return d && isAfter(d, monthStart) && j.status !== 'wishlist';
+  }).length;
+
+  const savedToday = jobs.filter((j) => {
+    const d = safeDate(j.createdAt);
+    return d && isAfter(d, dayStart);
+  }).length;
+
+  const savedThisWeek = jobs.filter((j) => {
+    const d = safeDate(j.createdAt);
+    return d && isAfter(d, weekStart);
+  }).length;
+
+  const savedThisMonth = jobs.filter((j) => {
+    const d = safeDate(j.createdAt);
+    return d && isAfter(d, monthStart);
+  }).length;
+
+  // ── Chart data ───────────────────────────────────────────────────
   const statusData = Object.entries(
     jobs.reduce((acc, j) => {
       acc[j.status] = (acc[j.status] || 0) + 1;
@@ -50,7 +101,6 @@ export default function AnalyticsPage() {
     fill: STATUS_COLORS[status] || '#6b7280',
   }));
 
-  // Industry data
   const industryData = Object.entries(
     jobs.reduce((acc, j) => {
       if (j.industry) acc[j.industry] = (acc[j.industry] || 0) + 1;
@@ -59,9 +109,11 @@ export default function AnalyticsPage() {
   )
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(([name, count]) => ({ name: name.length > 12 ? name.slice(0, 12) + '…' : name, count }));
+    .map(([name, count]) => ({
+      name: name.length > 12 ? name.slice(0, 12) + '…' : name,
+      count,
+    }));
 
-  // Source data
   const sourceData = Object.entries(
     jobs.reduce((acc, j) => {
       acc[j.sourceType] = (acc[j.sourceType] || 0) + 1;
@@ -69,9 +121,8 @@ export default function AnalyticsPage() {
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
 
-  // Monthly trend (last 6 months)
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
-    const month = subMonths(new Date(), 5 - i);
+    const month = subMonths(now, 5 - i);
     const monthStr = format(month, 'MMM');
     const monthFull = format(month, 'yyyy-MM');
     const monthJobs = jobs.filter((j) => j.createdAt?.startsWith(monthFull));
@@ -79,11 +130,12 @@ export default function AnalyticsPage() {
       month: monthStr,
       saved: monthJobs.length,
       applied: monthJobs.filter((j) => j.applicationDate?.startsWith(monthFull)).length,
-      interviews: monthJobs.filter((j) => ['interview_scheduled', 'interview_completed', 'offer', 'hired'].includes(j.status)).length,
+      interviews: monthJobs.filter((j) =>
+        ['interview_scheduled', 'interview_completed', 'offer', 'hired'].includes(j.status)
+      ).length,
     };
   });
 
-  // Skills gap (from lessonsLearned.weaknessesGaps)
   const skillsGaps = jobs
     .filter((j) => j.lessonsLearned?.weaknessesGaps)
     .map((j) => j.lessonsLearned.weaknessesGaps)
@@ -100,7 +152,55 @@ export default function AnalyticsPage() {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Analytics</h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Your job search performance at a glance</p>
 
-      {/* KPI Cards */}
+      {/* ── Activity: Day / Week / Month ─────────────────────────── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5 mb-6">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <CalendarRange className="w-4 h-4 text-indigo-500" /> Application Activity
+        </h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            {
+              period: 'Today',
+              icon: Calendar,
+              applied: appliedToday,
+              saved: savedToday,
+              color: 'indigo',
+            },
+            {
+              period: 'This Week',
+              icon: CalendarDays,
+              applied: appliedThisWeek,
+              saved: savedThisWeek,
+              color: 'purple',
+            },
+            {
+              period: 'This Month',
+              icon: CalendarRange,
+              applied: appliedThisMonth,
+              saved: savedThisMonth,
+              color: 'blue',
+            },
+          ].map(({ period, icon: Icon, applied: a, saved: s, color }) => (
+            <div key={period}
+              className="bg-slate-50 dark:bg-gray-800 rounded-xl p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
+                <Icon className={`w-3.5 h-3.5 text-${color}-500`} />
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{period}</span>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{a}</p>
+                <p className="text-xs text-gray-400">applied</p>
+              </div>
+              <div className="pt-1 border-t border-slate-200 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{s}</p>
+                <p className="text-xs text-gray-400">saved</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── KPI Cards ────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Total Saved', value: total, sub: 'job records', color: 'indigo', icon: Target },
@@ -119,7 +219,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Summary Bar */}
+      {/* ── Summary Bar ──────────────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5 mb-6">
         <div className="grid grid-cols-3 md:grid-cols-6 divide-x divide-slate-100 dark:divide-gray-800 text-center">
           {[
@@ -138,18 +238,17 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* ── Charts row 1 ─────────────────────────────────────────── */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-        {/* Status Pie Chart */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Application Status</h3>
           {statusData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={statusData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                    {statusData.map((entry, index) => (
-                      <Cell key={index} fill={entry.fill} />
-                    ))}
+                  <Pie data={statusData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                    {statusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -168,7 +267,6 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Monthly Trend */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Monthly Trend</h3>
           <ResponsiveContainer width="100%" height={220}>
@@ -186,8 +284,8 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* ── Charts row 2 ─────────────────────────────────────────── */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Industry Breakdown */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Applications by Industry</h3>
           {industryData.length > 0 ? (
@@ -205,7 +303,6 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Source Breakdown */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Jobs by Source</h3>
           {sourceData.length > 0 ? (
@@ -213,9 +310,7 @@ export default function AnalyticsPage() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={sourceData} cx="50%" cy="50%" outerRadius={80} dataKey="value" nameKey="name">
-                    {sourceData.map((_, i) => (
-                      <Cell key={i} fill={['#6366f1','#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16'][i % 10]} />
-                    ))}
+                    {sourceData.map((_, i) => <Cell key={i} fill={SOURCE_PALETTE[i % 10]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -223,7 +318,7 @@ export default function AnalyticsPage() {
               <div className="flex flex-wrap gap-2 mt-2 justify-center">
                 {sourceData.map((s, i) => (
                   <div key={s.name} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: ['#6366f1','#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16'][i % 10] }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: SOURCE_PALETTE[i % 10] }} />
                     {s.name} ({s.value})
                   </div>
                 ))}
@@ -235,7 +330,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Skills Gaps */}
+      {/* ── Skills Gaps ──────────────────────────────────────────── */}
       {skillsGaps.length > 0 && (
         <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-sm p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
@@ -252,16 +347,16 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Tips */}
+      {/* ── Empty state ───────────────────────────────────────────── */}
       {total === 0 && (
         <div className="mt-6 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl border border-indigo-100 dark:border-indigo-900 p-6 text-center">
           <TrendingUp className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
           <h3 className="font-semibold text-indigo-900 dark:text-indigo-100 mb-2">No data yet</h3>
           <p className="text-sm text-indigo-700 dark:text-indigo-300">
-            Start adding jobs to see your analytics. Track applications, interviews, and more!
+            Start adding jobs to see your analytics.
           </p>
         </div>
       )}
     </div>
   );
-}
+  }
