@@ -43,7 +43,7 @@ export const scheduleJobReminders = async (job: JobRecord): Promise<void> => {
       body: r.timing === 'apply_by'
         ? `You set a reminder to apply to ${job.company}`
         : `${job.company} closing date is coming up`,
-      schedule: { at },
+      schedule: { at, allowWhileIdle: true },
       sound: undefined,
       attachments: undefined,
       actionTypeId: '',
