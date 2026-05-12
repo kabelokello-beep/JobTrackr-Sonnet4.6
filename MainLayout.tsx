@@ -6,6 +6,7 @@ import JobsPage from '../pages/JobsPage';
 import AnalyticsPage from '../pages/AnalyticsPage';
 import CalendarPage from '../pages/CalendarPage';
 import SettingsPage from '../pages/SettingsPage';
+import WeeklyMissionsPage from '../pages/WeeklyMissionsPage';
 
 export default function MainLayout() {
   const { activeTab } = useStore();
@@ -13,11 +14,12 @@ export default function MainLayout() {
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage />;
-      case 'jobs': return <JobsPage />;
+      case 'jobs':      return <JobsPage />;
       case 'analytics': return <AnalyticsPage />;
-      case 'calendar': return <CalendarPage />;
-      case 'settings': return <SettingsPage />;
-      default: return <DashboardPage />;
+      case 'calendar':  return <CalendarPage />;
+      case 'missions':  return <WeeklyMissionsPage />;
+      case 'settings':  return <SettingsPage />;
+      default:          return <DashboardPage />;
     }
   };
 
