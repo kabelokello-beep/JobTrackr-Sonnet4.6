@@ -45,7 +45,7 @@ jobs:
             if [ -f "$file" ]; then mv "$file" "src/components/$file"; fi
           done
 
-          for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx SettingsPage.tsx
+          for file in AnalyticsPage.tsx AuthPage.tsx CalendarPage.tsx DashboardPage.tsx JobsPage.tsx SettingsPage.tsx WeeklyMissionsPage.tsx
           do
             if [ -f "$file" ]; then mv "$file" "src/pages/$file"; fi
           done
