@@ -1,19 +1,20 @@
 import { useStore } from '../store/useStore';
 import {
   LayoutDashboard, Briefcase, BarChart3, Calendar,
-  Settings, LogOut, Star, Archive, ChevronRight
+  Settings, LogOut, Star, Archive, ChevronRight, Zap
 } from 'lucide-react';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'jobs', label: 'My Jobs', icon: Briefcase },
+  { id: 'jobs',      label: 'My Jobs',   icon: Briefcase },
+  { id: 'missions',  label: 'Missions',  icon: Zap },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'calendar', label: 'Calendar', icon: Calendar },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'calendar',  label: 'Calendar',  icon: Calendar },
+  { id: 'settings',  label: 'Settings',  icon: Settings },
 ];
 
 export default function Sidebar() {
-  const { activeTab, setActiveTab, user, logout, darkMode } = useStore();
+  const { activeTab, setActiveTab, user, logout } = useStore();
 
   return (
     <aside className="hidden md:flex w-64 flex-col bg-white dark:bg-gray-900 border-r border-slate-200 dark:border-gray-800 shadow-sm">
@@ -36,7 +37,7 @@ export default function Sidebar() {
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
               activeTab === id
                 ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
@@ -44,6 +45,11 @@ export default function Sidebar() {
           >
             <Icon className={`w-5 h-5 ${activeTab === id ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
             {label}
+            {id === 'missions' && activeTab !== 'missions' && (
+              <span className="ml-auto text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-semibold">
+                XP
+              </span>
+            )}
             {activeTab === id && (
               <ChevronRight className="w-4 h-4 ml-auto text-indigo-400" />
             )}
